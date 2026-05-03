@@ -1,0 +1,34 @@
+services:
+  # ntfy self-hosted — push notification server
+  - type: web
+    name: ntfy-server
+    runtime: docker
+    dockerfilePath: ./Dockerfile.ntfy
+    plan: free
+    envVars:
+      - key: NTFY_BASE_URL
+        sync: false
+      - key: NTFY_AUTH_DEFAULT_ACCESS
+        value: deny-all
+
+  # news-fetcher — cron job polling APIs
+  - type: cron
+    name: news-fetcher
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    schedule: "0 * * * *"  # every hour
+    plan: free
+    envVars:
+      - key: GNEWS_API_KEY
+        sync: false
+      - key: NEWSDATA_API_KEY
+        sync: false
+      - key: NTFY_SERVER_URL
+        sync: false
+      - key: NTFY_TOPIC
+        sync: false
+      - key: NTFY_AUTH_TOKEN
+        sync: false
+      - key: DB_PATH
+        value: /tmp/news.db

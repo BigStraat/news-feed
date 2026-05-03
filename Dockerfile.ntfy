@@ -1,0 +1,2 @@
+FROM binwiederhier/ntfy
+CMD ["serve", "--listen-http", ":10000"]
