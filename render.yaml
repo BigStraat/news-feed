@@ -11,14 +11,13 @@ services:
       - key: NTFY_AUTH_DEFAULT_ACCESS
         value: deny-all
 
-  # news-fetcher — cron job polling APIs
-  - type: cron
+  # news-fetcher — web service triggered by external cron (cron-job.org)
+  - type: web
     name: news-fetcher
     runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: python main.py
-    schedule: "0 * * * *"  # every hour
-    plan: starter
+    startCommand: python server.py
+    plan: free
     envVars:
       - key: GNEWS_API_KEY
         sync: false
@@ -29,6 +28,8 @@ services:
       - key: NTFY_TOPIC
         sync: false
       - key: NTFY_AUTH_TOKEN
+        sync: false
+      - key: CRON_SECRET
         sync: false
       - key: DB_PATH
         value: /tmp/news.db
