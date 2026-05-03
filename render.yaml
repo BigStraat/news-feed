@@ -18,7 +18,7 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: python main.py
     schedule: "0 * * * *"  # every hour
-    plan: free
+    plan: starter
     envVars:
       - key: GNEWS_API_KEY
         sync: false
