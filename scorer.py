@@ -2,12 +2,17 @@
 
 import json
 import logging
+import re
+import time
 
 from google import genai
 
 from sources import Article
 
 log = logging.getLogger("news.scorer")
+
+MAX_RETRIES = 3
+RETRY_BACKOFF = [2, 5, 10]
 
 SYSTEM_PROMPT = """\
 Tu es un assistant qui évalue la pertinence d'articles d'actualité pour un passionné de tech.
@@ -43,7 +48,9 @@ def score_article(
     client: genai.Client,
     article: Article,
     recent_titles: list[str],
+    prompt: str | None = None,
 ) -> dict:
+    system_prompt = prompt or SYSTEM_PROMPT
     recent = "\n".join(f"- {t}" for t in recent_titles) if recent_titles else "(aucun)"
 
     user_msg = (
@@ -54,21 +61,37 @@ def score_article(
         f"Derniers titres notifiés :\n{recent}"
     )
 
-    response = client.models.generate_content(
-        model="gemini-2.0-flash",
-        contents=user_msg,
-        config=genai.types.GenerateContentConfig(
-            system_instruction=SYSTEM_PROMPT,
-            max_output_tokens=256,
-        ),
-    )
+    for attempt in range(MAX_RETRIES):
+        try:
+            response = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=user_msg,
+                config=genai.types.GenerateContentConfig(
+                    system_instruction=system_prompt,
+                    max_output_tokens=256,
+                    thinking_config=genai.types.ThinkingConfig(thinking_budget=0),
+                ),
+            )
+            break
+        except Exception as e:
+            status = getattr(e, "status_code", None) or getattr(e, "code", None)
+            if status in (429, 503) and attempt < MAX_RETRIES - 1:
+                wait = RETRY_BACKOFF[attempt]
+                log.warning("Gemini %s, retry in %ds (%d/%d)", status, wait, attempt + 1, MAX_RETRIES)
+                time.sleep(wait)
+            else:
+                raise
 
     text = response.text.strip()
     if text.startswith("```"):
         text = text.split("\n", 1)[1].rsplit("```", 1)[0].strip()
 
-    try:
-        return json.loads(text)
-    except json.JSONDecodeError:
-        log.warning("Failed to parse scorer response: %s", text)
-        return {"score": 5, "priority": "default", "reason": "parse error", "is_duplicate": False}
+    match = re.search(r"\{[^{}]*\}", text, re.DOTALL)
+    if match:
+        try:
+            return json.loads(match.group())
+        except json.JSONDecodeError:
+            pass
+
+    log.warning("Failed to parse scorer response: %s", text)
+    return {"score": 5, "priority": "default", "reason": "parse error", "is_duplicate": False}

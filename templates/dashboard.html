@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — News Notifier{% endblock %}
+{% block content %}
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
+</div>
+
+<!-- Stats cards -->
+<div class="grid grid-cols-1 gap-4 sm:grid-cols-3 mb-8">
+    <div class="bg-white overflow-hidden shadow rounded-lg p-5">
+        <div class="text-sm font-medium text-gray-500 truncate">Notifications aujourd'hui</div>
+        <div class="mt-1 text-3xl font-semibold text-gray-900">{{ stats.today_count }}</div>
+    </div>
+    <div class="bg-white overflow-hidden shadow rounded-lg p-5">
+        <div class="text-sm font-medium text-gray-500 truncate">Score moyen</div>
+        <div class="mt-1 text-3xl font-semibold text-gray-900">{{ stats.avg_score }}</div>
+    </div>
+    <div class="bg-white overflow-hidden shadow rounded-lg p-5">
+        <div class="text-sm font-medium text-gray-500 truncate">Par priorité</div>
+        <div class="mt-2 flex flex-wrap gap-2">
+            {% for p, count in stats.by_priority.items() %}
+            <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
+                {% if p == 'urgent' %}bg-red-100 text-red-800
+                {% elif p == 'high' %}bg-orange-100 text-orange-800
+                {% elif p == 'default' %}bg-blue-100 text-blue-800
+                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                {{ p }}: {{ count }}
+            </span>
+            {% endfor %}
+            {% if not stats.by_priority %}
+            <span class="text-gray-400 text-sm">—</span>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Notification history -->
+<div class="bg-white shadow rounded-lg" hx-get="/" hx-trigger="every 60s" hx-select="#notif-table" hx-target="#notif-table" hx-swap="outerHTML">
+    <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+        <h2 class="text-lg font-medium text-gray-900">Dernières notifications</h2>
+    </div>
+    <div id="notif-table" class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Titre</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Score</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Priorité</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Source</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Raison</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for n in notifications %}
+                <tr>
+                    <td class="px-6 py-4 text-sm">
+                        <a href="{{ n.url }}" target="_blank" class="text-indigo-600 hover:text-indigo-900 hover:underline">{{ n.title[:80] }}{% if n.title|length > 80 %}...{% endif %}</a>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold
+                            {% if n.score >= 8 %}bg-green-100 text-green-800
+                            {% elif n.score >= 6 %}bg-blue-100 text-blue-800
+                            {% else %}bg-gray-100 text-gray-800{% endif %}">
+                            {{ n.score }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
+                            {% if n.priority == 'urgent' %}bg-red-100 text-red-800
+                            {% elif n.priority == 'high' %}bg-orange-100 text-orange-800
+                            {% elif n.priority == 'default' %}bg-blue-100 text-blue-800
+                            {% else %}bg-gray-100 text-gray-800{% endif %}">
+                            {{ n.priority }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-500">{{ n.source }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-500">{{ n.reason[:60] if n.reason else '—' }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{{ n.sent_at_fmt }}</td>
+                </tr>
+                {% endfor %}
+                {% if not notifications %}
+                <tr>
+                    <td colspan="6" class="px-6 py-8 text-center text-gray-400">Aucune notification envoyée</td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

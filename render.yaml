@@ -11,17 +11,19 @@ services:
       - key: NTFY_AUTH_DEFAULT_ACCESS
         value: deny-all
 
-  # news-fetcher — web service triggered by external cron (cron-job.org)
+  # news-fetcher + web UI — single FastAPI service
   - type: web
     name: news-fetcher
     runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: python server.py
+    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
     plan: free
     envVars:
       - key: GNEWS_API_KEY
         sync: false
       - key: NEWSDATA_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
         sync: false
       - key: NTFY_SERVER_URL
         sync: false
@@ -30,6 +32,10 @@ services:
       - key: NTFY_AUTH_TOKEN
         sync: false
       - key: CRON_SECRET
+        sync: false
+      - key: WEBUI_USER
+        sync: false
+      - key: WEBUI_PASSWORD
         sync: false
       - key: DB_PATH
         value: /tmp/news.db

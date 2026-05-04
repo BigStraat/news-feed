@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="fr" class="h-full bg-gray-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}News Notifier{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+</head>
+<body class="h-full">
+    <div class="min-h-full">
+        <nav class="bg-gray-800">
+            <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                <div class="flex h-16 items-center justify-between">
+                    <div class="flex items-center">
+                        <span class="text-white font-bold text-lg">News Notifier</span>
+                        <div class="ml-10 flex items-baseline space-x-4">
+                            <a href="/" class="rounded-md px-3 py-2 text-sm font-medium {% if active == 'dashboard' %}bg-gray-900 text-white{% else %}text-gray-300 hover:bg-gray-700 hover:text-white{% endif %}">Dashboard</a>
+                            <a href="/keywords" class="rounded-md px-3 py-2 text-sm font-medium {% if active == 'keywords' %}bg-gray-900 text-white{% else %}text-gray-300 hover:bg-gray-700 hover:text-white{% endif %}">Keywords</a>
+                            <a href="/prompt" class="rounded-md px-3 py-2 text-sm font-medium {% if active == 'prompt' %}bg-gray-900 text-white{% else %}text-gray-300 hover:bg-gray-700 hover:text-white{% endif %}">Prompt</a>
+                            <a href="/settings" class="rounded-md px-3 py-2 text-sm font-medium {% if active == 'settings' %}bg-gray-900 text-white{% else %}text-gray-300 hover:bg-gray-700 hover:text-white{% endif %}">Settings</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+        <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</body>
+</html>

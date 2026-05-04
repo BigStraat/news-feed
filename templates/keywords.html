@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Keywords — News Notifier{% endblock %}
+{% block content %}
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Keywords</h1>
+    <p class="mt-1 text-sm text-gray-500">Mots-clés utilisés pour rechercher des articles sur chaque API.</p>
+</div>
+
+<div id="keyword-page">
+<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+    {% for source, label in [("gnews", "GNews"), ("newsdata", "NewsData")] %}
+    <div class="bg-white shadow rounded-lg p-6">
+        <h2 class="text-lg font-medium text-gray-900 mb-4">{{ label }}</h2>
+
+        <div id="{{ source }}-list" class="flex flex-wrap gap-2 mb-4">
+            {% for kw in keywords if kw.source == source %}
+            <span class="inline-flex items-center gap-x-1 rounded-full bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700">
+                {{ kw.keyword }}
+                <button
+                    hx-delete="/keywords/{{ kw.id }}"
+                    hx-target="#keyword-page"
+                    hx-swap="innerHTML"
+                    class="ml-1 text-indigo-400 hover:text-indigo-600 cursor-pointer">&times;</button>
+            </span>
+            {% endfor %}
+            {% if not keywords|selectattr("source", "equalto", source)|list %}
+            <span class="text-gray-400 text-sm">Aucun keyword</span>
+            {% endif %}
+        </div>
+
+        <form hx-post="/keywords" hx-target="#keyword-page" hx-swap="innerHTML" class="flex gap-2">
+            <input type="hidden" name="source" value="{{ source }}">
+            <input type="text" name="keyword" required placeholder="Nouveau keyword..."
+                   class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm px-3 py-2 border">
+            <button type="submit"
+                    class="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
+                Ajouter
+            </button>
+        </form>
+    </div>
+    {% endfor %}
+</div>
+</div>
+{% endblock %}

@@ -1,8 +1,9 @@
-"""Orchestrateur : fetch → dédup → notif ntfy."""
+"""Orchestrateur : fetch → dédup → score → notif ntfy."""
 
 import logging
 import os
 import sys
+import time
 
 import httpx
 from dotenv import load_dotenv
@@ -43,19 +44,35 @@ def run() -> int:
     ntfy_token = os.getenv("NTFY_AUTH_TOKEN") or None
     db_path = os.getenv("DB_PATH", "news.db")
 
+    with db.connect(db_path) as conn:
+        db.seed_defaults(conn)
+
+        settings = db.get_all_settings(conn)
+        language = settings.get("language", config.LANGUAGE)
+        min_score = int(settings.get("min_score", str(config.MIN_SCORE)))
+        max_per_query = int(settings.get("max_per_query", str(config.MAX_PER_QUERY)))
+        dedup_ttl_days = int(settings.get("dedup_ttl_days", str(config.DEDUP_TTL_DAYS)))
+        prompt = settings.get("prompt", scorer.SYSTEM_PROMPT)
+
+        gnews_kws = [k["keyword"] for k in db.get_keywords(conn, "gnews")]
+        newsdata_kws = [k["keyword"] for k in db.get_keywords(conn, "newsdata")]
+
+        if not gnews_kws:
+            gnews_kws = config.GNEWS_KEYWORDS
+        if not newsdata_kws:
+            newsdata_kws = config.NEWSDATA_KEYWORDS
+
     articles: list[sources.Article] = []
     with httpx.Client() as client:
         try:
             articles += sources.fetch_gnews(
-                client, gnews_key, config.GNEWS_KEYWORDS,
-                config.LANGUAGE, config.MAX_PER_QUERY,
+                client, gnews_key, gnews_kws, language, max_per_query,
             )
         except httpx.HTTPError as e:
             log.error("GNews fetch failed: %s", e)
         try:
             articles += sources.fetch_newsdata(
-                client, newsdata_key, config.NEWSDATA_KEYWORDS,
-                config.LANGUAGE, config.MAX_PER_QUERY,
+                client, newsdata_key, newsdata_kws, language, max_per_query,
             )
         except httpx.HTTPError as e:
             log.error("NewsData fetch failed: %s", e)
@@ -69,7 +86,7 @@ def run() -> int:
         recent_titles: list[str] = []
 
         with db.connect(db_path) as conn:
-            db.purge_old(conn, config.DEDUP_TTL_DAYS)
+            db.purge_old(conn, dedup_ttl_days)
             for art in articles:
                 if not art.url or not art.title:
                     continue
@@ -77,8 +94,9 @@ def run() -> int:
                     skipped += 1
                     continue
 
+                time.sleep(4)
                 try:
-                    result = scorer.score_article(ai, art, recent_titles[-5:])
+                    result = scorer.score_article(ai, art, recent_titles[-5:], prompt)
                 except Exception as e:
                     log.error("Scoring failed for %s: %s", art.url, e)
                     result = {"score": 5, "priority": "default", "is_duplicate": False, "reason": "scorer error"}
@@ -91,7 +109,7 @@ def run() -> int:
                     skipped += 1
                     continue
 
-                if result.get("score", 0) < config.MIN_SCORE:
+                if result.get("score", 0) < min_score:
                     db.mark_seen(conn, art.url)
                     ignored += 1
                     continue
@@ -111,7 +129,17 @@ def run() -> int:
                 except httpx.HTTPError as e:
                     log.error("ntfy send failed for %s: %s", art.url, e)
                     continue
+
                 db.mark_seen(conn, art.url)
+                db.log_notification(
+                    conn,
+                    title=art.title,
+                    url=art.url,
+                    source=art.origin,
+                    score=result.get("score", 0),
+                    priority=result.get("priority", "default"),
+                    reason=result.get("reason"),
+                )
                 recent_titles.append(art.title)
                 sent += 1
 

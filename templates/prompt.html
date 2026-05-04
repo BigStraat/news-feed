@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Prompt — News Notifier{% endblock %}
+{% block content %}
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Prompt LLM</h1>
+    <p class="mt-1 text-sm text-gray-500">Prompt système envoyé à Gemini Flash pour le scoring des articles.</p>
+</div>
+
+<div class="bg-white shadow rounded-lg p-6">
+    <form hx-post="/prompt" hx-target="#prompt-feedback" hx-swap="innerHTML">
+        <textarea name="prompt" rows="20"
+                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm font-mono p-3 border">{{ prompt }}</textarea>
+        <div class="mt-4 flex items-center gap-4">
+            <button type="submit"
+                    class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
+                Sauvegarder
+            </button>
+            <button type="button"
+                    hx-post="/prompt/reset"
+                    hx-target="#prompt-feedback"
+                    hx-swap="innerHTML"
+                    class="rounded-md bg-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-300">
+                Réinitialiser par défaut
+            </button>
+            <div id="prompt-feedback"></div>
+        </div>
+    </form>
+</div>
+{% endblock %}
